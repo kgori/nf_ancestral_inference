@@ -1,6 +1,7 @@
 nextflow.enable.dsl=2
 
 params.genotypedVcf
+params.panelVcf
 params.metadata
 params.csvDataSet
 params.outDir
@@ -85,18 +86,23 @@ process ancestral_reconstruction {
 }
 
 process intersect_vcfs {
+    cpus 4
+    executor 'lsf'
+    queue 'normal'
+    memory 1.GB
+    time 2.h
+
     input:
-    tuple path(ancestralVcf), path(ancestralVcfIndex), path(otherVcf)
+    tuple path(ancestralVcf), path(ancestralVcfIndex), path(otherVcf), path(otherVcfIndex)
 
     output:
     tuple path("${otherVcf.getBaseName(2)}.intersected.vcf.gz"), path("${otherVcf.getBaseName(2)}.intersected.vcf.gz.csi")
 
     script:
     """
-    bcftools index "${otherVcf}"
     bcftools isec -c none -p . -Oz -n2 -w2 \
-      -o "${otherVcf.getBaseName(2)}.intersected.vcf.gz" \
       "${ancestralVcf}" "${otherVcf}"
+    mv "0001.vcf.gz" "${otherVcf.getBaseName(2)}.intersected.vcf.gz"
     bcftools index "${otherVcf.getBaseName(2)}.intersected.vcf.gz"
     """
 }
@@ -104,10 +110,15 @@ process intersect_vcfs {
 workflow {
     
     genotyped_vcf = Channel.fromPath(params.genotypedVcf, checkIfExists: true)
+    panel_vcf = Channel.fromPath(params.panelVcf, checkIfExists: true)
     metadata = Channel.fromPath(params.metadata, checkIfExists: true)
     csv_dataset = Channel.fromPath(params.csvDataSet, checkIfExists: true)
     read_depths = extract_readdepths(genotyped_vcf)
     rearranged_read_depths = rearrange_readdepths(read_depths, metadata)
     annotated_copynumber = annotate_copynumber(csv_dataset, rearranged_read_depths, metadata)
     ancestral = ancestral_reconstruction(annotated_copynumber)
+
+    other_vcfs = genotyped_vcf.map { it -> tuple(it, it + ".csi") } |
+        concat(panel_vcf.map { it -> tuple(it, it + ".csi") })
+    intersected = intersect_vcfs(ancestral.combine(other_vcfs))
 }
