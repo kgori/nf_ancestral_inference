@@ -6,9 +6,6 @@ parser$add_argument("variants_file")
 parser$add_argument("outfile")
 args <- parser$parse_args()
 
-args <- list(variants_file = "../../results/annotated/platypus_result.readdepths.rearranged.annotated.tsv.gz",
-outfile = "test.vcf")
-
 if (!file.exists(args$variants_file)) {
   stop(sprintf("Variants file does not exist: %s", args$variants_file))
 }
@@ -135,8 +132,6 @@ anc_reconstr[modeCN == 0,
 anc_reconstr[num_modes > 1, genotype := ifelse(modeCN == 1,
                                                "NA",
                                                "NA")]
-
-
 
 if (any(anc_reconstr$genotype == "?")) {
   warning("There are still unknown genotypes in the ancestral reconstruction.")
