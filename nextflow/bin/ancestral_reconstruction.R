@@ -242,7 +242,7 @@ if (any(ht_inference$haplotype == "?")) {
 conn <- file(args$outfile)
 writeLines(c(
     "##fileformat=VCFv4.2",
-    "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\"",
+    "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">",
     "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tCTVT\tHT"
 ), con = conn)
 
