@@ -107,6 +107,29 @@ process intersect_vcfs {
     """
 }
 
+process merge_vcfs {
+
+    cpus 4
+    executor 'lsf'
+    queue 'normal'
+    memory 8.GB
+    time 2.h
+
+    publishDir "${params.outDir}", mode: 'copy'
+
+    input:
+    tuple path(vcf1), path(vcf1Index), path(vcf2), path(vcf2Index), path(vcf3), path(vcf3Index)
+
+    output:
+    tuple path("final_merged.vcf.gz"), path("final_merged.vcf.gz.csi")
+
+    script:
+    """
+    bcftools merge -Oz -o final_merged.vcf.gz ${vcf1} ${vcf2} ${vcf3}
+    bcftools index final_merged.vcf.gz
+    """
+}
+
 workflow {
     
     genotyped_vcf = Channel.fromPath(params.genotypedVcf, checkIfExists: true)
@@ -121,4 +144,5 @@ workflow {
     other_vcfs = genotyped_vcf.map { it -> tuple(it, it + ".csi") } |
         concat(panel_vcf.map { it -> tuple(it, it + ".csi") })
     intersected = intersect_vcfs(ancestral.combine(other_vcfs))
+    intersected.collect().combine(ancestral) | merge_vcfs
 }
